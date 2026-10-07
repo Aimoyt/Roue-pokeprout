@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pokeprout — Roue de la chance</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#e9d5ff,#dbeafe);color:#172033}
+header{padding:22px;text-align:center;background:#fff8;border-bottom:1px solid #fff}.logo{font-size:32px;font-weight:900}
+main{max-width:1000px;margin:auto;padding:24px;display:grid;gap:22px;grid-template-columns:1fr 340px}
+.card{background:#fff;border-radius:22px;padding:22px;box-shadow:0 10px 30px #0001}
+.wheelbox{text-align:center}.wheel{width:min(72vw,430px);aspect-ratio:1;margin:15px auto;position:relative;border-radius:50%;border:12px solid #fff;box-shadow:0 8px 25px #0003;overflow:hidden;background:conic-gradient(#ffd166 0 16.67%,#7bdff2 0 33.34%,#b2f7ef 0 50.01%,#cdb4db 0 66.68%,#ffc8dd 0 83.35%,#a0c4ff 0)}
+.wheel:after{content:"";position:absolute;inset:38%;background:#fff;border-radius:50%;box-shadow:0 2px 8px #0003}
+.pointer{font-size:42px;transform:rotate(180deg);display:block}.labels{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}.labels span{position:absolute;width:120px;text-align:center}.l1{top:45px}.l2{right:20px;top:115px}.l3{right:25px;bottom:105px}.l4{bottom:45px}.l5{left:25px;bottom:105px}.l6{left:20px;top:115px}
+input,button{font:inherit;border-radius:12px;padding:12px;border:1px solid #ccd2df}input{width:100%;margin:7px 0 10px}button{cursor:pointer;border:0;background:#172033;color:white;font-weight:800;margin:4px}.primary{background:#7c3aed}.danger{background:#dc2626}.success{background:#16a34a}
+.row{display:flex;gap:8px}.row>*{flex:1}.msg{min-height:24px;font-weight:700}.prize{padding:10px;border-radius:10px;background:#f3f4f6;margin:7px 0}.small{font-size:13px;color:#667085}
+.admin{display:none}.admin.show{display:block}
+@media(max-width:800px){main{grid-template-columns:1fr}.wheel{width:min(85vw,400px)}}
+</style>
+</head>
+<body>
+<header><div class="logo">🌱 Pokeprout</div><div>🎡 Roue de la chance</div></header>
+<main>
+<section class="card wheelbox">
+<span class="pointer">🔻</span>
+<div class="wheel" id="wheel">
+<div class="labels"><span class="l1">Booster</span><span class="l2">Mini cadeau</span><span class="l3">Gros booster</span><span class="l4">Carte surprise</span><span class="l5">Bon cadeau</span><span class="l6">Super cadeau</span></div>
+</div>
+<input id="code" placeholder="Entre ton code à usage unique">
+<button class="primary" id="spin">🎉 Faire tourner</button>
+<div class="msg" id="msg"></div>
+<p class="small">Chaque code ne peut être utilisé qu'une seule fois sur cet appareil.</p>
+</section>
+<section class="card">
+<h2>🎁 Lots</h2>
+<div id="prizes"></div>
+<hr>
+<button onclick="toggleAdmin()">🔐 Coin admin</button>
+<div class="admin" id="admin">
+<h3>Administration</h3>
+<input id="adminPass" type="password" placeholder="Mot de passe admin">
+<button onclick="login()">Entrer</button>
+<div id="panel" style="display:none">
+<p class="small">Version locale : les données sont conservées dans le navigateur.</p>
+<div class="row"><input id="newCode" placeholder="Nouveau code"><button class="success" onclick="addCode()">Ajouter</button></div>
+<button class="danger" onclick="resetCodes()">Réinitialiser les codes</button>
+<h4>Codes créés</h4><div id="codes"></div>
+</div></div>
+</section>
+</main>
+<script>
+const defaultPrizes=["Booster Pokeprout","Mini cadeau","Gros booster","Carte surprise","Bon cadeau","Super cadeau"];
+const prizes=JSON.parse(localStorage.getItem("pp_prizes")||JSON.stringify(defaultPrizes));
+let codes=JSON.parse(localStorage.getItem("pp_codes")||'{"POKE2026":false,"CADEAU2026":false}');
+const ADMIN="POKEADMIN";
+const $=id=>document.getElementById(id);
+function render(){ $("prizes").innerHTML=prizes.map(x=>`<div class="prize">🎁 ${x}</div>`).join(""); $("codes").innerHTML=Object.entries(codes).map(([c,u])=>`<div class="prize">${c} — ${u?"utilisé":"disponible"}</div>`).join("");}
+function save(){localStorage.setItem("pp_codes",JSON.stringify(codes));localStorage.setItem("pp_prizes",JSON.stringify(prizes));render()}
+function toggleAdmin(){$("admin").classList.toggle("show")}
+function login(){if($("adminPass").value===ADMIN){$("panel").style.display="block";$("msg").textContent="";render()}else alert("Mot de passe incorrect.")}
+function addCode(){let c=$("newCode").value.trim().toUpperCase();if(!c)return;if(codes[c]===undefined){codes[c]=false;$("newCode").value="";save()}else alert("Ce code existe déjà.")}
+function resetCodes(){if(confirm("Réinitialiser tous les codes ?")){codes={};save()}}
+$("spin").onclick=()=>{
+ let c=$("code").value.trim().toUpperCase();
+ if(!c){$("msg").textContent="⚠️ Entre un code.";return}
+ if(codes[c]===undefined){$("msg").textContent="❌ Code invalide.";return}
+ if(codes[c]){$("msg").textContent="❌ Ce code a déjà été utilisé.";return}
+ codes[c]=true;save();
+ const i=Math.floor(Math.random()*prizes.length), turns=5+i/prizes.length;
+ $("wheel").style.transition="transform 4s cubic-bezier(.15,.8,.2,1)";
+ $("wheel").style.transform=`rotate(${turns*360+(i*360/prizes.length)}deg)`;
+ setTimeout(()=>{$("msg").textContent="🎉 Gagné : "+prizes[i]+" !";},4100);
+};
+render();
+</script>
+</body></html>
