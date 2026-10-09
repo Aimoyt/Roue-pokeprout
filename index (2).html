@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pokeprout — Roue de la chance</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#e9d5ff,#dbeafe);color:#172033}
+header{padding:22px;text-align:center;background:#ffffffdd;border-bottom:1px solid #fff}
+.logo{font-size:32px;font-weight:900}
+main{max-width:1000px;margin:auto;padding:24px}
+.card{background:#fff;border-radius:22px;padding:22px;box-shadow:0 10px 30px #0002}
+.wheelbox{text-align:center}
+.wheelwrap{position:relative;width:min(82vw,500px);aspect-ratio:1;margin:42px auto 18px}
+.wheel{width:100%;height:100%;position:relative;border-radius:50%;border:12px solid #fff;box-shadow:0 8px 25px #0003;overflow:hidden;background:#ffd166;transition:transform 4s cubic-bezier(.12,.75,.15,1)}
+.wheel:after{content:"";position:absolute;inset:38%;background:#fff;border-radius:50%;box-shadow:0 2px 8px #0003;z-index:5}
+.pointer{position:absolute;z-index:20;left:50%;top:-36px;transform:translateX(-50%);font-size:42px;line-height:1}
+.labels{position:absolute;inset:0;font-weight:800;font-size:13px;z-index:4}
+.labels span{position:absolute;left:50%;top:50%;width:115px;text-align:center;line-height:1.1;transform-origin:0 0;white-space:normal}
+input,button,textarea{font:inherit;border-radius:12px;padding:12px;border:1px solid #ccd2df}
+input{width:100%;margin:7px 0 10px}
+button{cursor:pointer;border:0;background:#172033;color:white;font-weight:800;margin:4px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:#7c3aed}.danger{background:#dc2626}.success{background:#16a34a}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.msg{min-height:24px;font-weight:700}
+.prize{padding:10px;border-radius:10px;background:#f3f4f6;margin:7px 0}
+.topnav{display:flex;justify-content:center;gap:10px;padding:12px;position:sticky;top:0;z-index:50;background:#ffffffee;backdrop-filter:blur(8px);border-bottom:1px solid #ddd}.topnav button{margin:0}.small{font-size:13px;color:#667085}
+.shopItem{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;margin:8px 0;border-radius:12px;background:#f3f4f6}
+.rank{padding:9px 11px;margin:6px 0;border-radius:10px;background:#f3f4f6}
+
+#playerAuth{margin-bottom:18px}#playerAuth button{margin-right:6px}
+.adminButton{position:fixed;top:16px;right:16px;z-index:10000;margin:0;box-shadow:0 5px 18px #0003}
+.admin{display:none;position:fixed;top:64px;right:16px;width:min(430px,calc(100vw - 32px));max-height:calc(100vh - 80px);overflow:auto;z-index:9999;box-shadow:0 18px 50px #0004;border:2px solid #e5e7eb}
+.admin.show{display:block}
+.adminClose{position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:50%;background:#ef4444;color:#fff;font-size:22px;font-weight:700;line-height:34px;cursor:pointer}.adminClose:hover{filter:brightness(.9)}
+.steps{margin-top:22px;text-align:left}
+.step{background:#f5f7fa;border-radius:14px;padding:15px;margin-bottom:12px}
+.step2.disabled{opacity:.55}
+@media(max-width:600px){.wheelwrap{width:min(88vw,430px)}.labels span{width:90px}}
+</style>
+</head>
+<body>
+<header><div class="logo">🌱 Pokeprout</div><div>🎡 Roue de la chance</div></header>
+<nav class="topnav" aria-label="Navigation">
+  <button type="button" id="goWheel" class="primary">🎡 Roue</button>
+  <button type="button" id="goShop">🛍️ Boutique</button>
+  <button type="button" id="goLeaderboard">🏆 Classement</button>
+</nav>
+
+<main>
+<section class="card" id="playerAuth">
+  <h2>👤 Connexion</h2>
+  <p class="small">Une adresse e-mail est obligatoire pour jouer.</p>
+  <div id="authForms">
+    <input id="playerEmail" type="email" placeholder="Adresse e-mail" autocomplete="email">
+    <input id="playerPass" type="password" placeholder="Mot de passe" autocomplete="current-password">
+    <button id="playerLogin" class="primary" type="button">🔓 Se connecter</button>
+    <button id="playerRegister" class="success" type="button">📝 Créer un compte</button>
+    <div id="playerAuthMsg" class="msg"></div>
+  </div>
+  <div id="playerLogged" style="display:none">
+    <strong>✅ Connecté : <span id="playerEmailDisplay"></span></strong>
+    <div style="margin-top:8px">💎 <strong id="gemCount">0</strong> gemmes · 🎡 <strong id="spinCount">0</strong> tours disponibles</div>
+    <button id="useSavedTourTop" class="success" type="button" disabled>🎟️ Utiliser un tour conservé</button>
+    <div style="margin-top:12px;padding:12px;border:1px solid #d6b4ff;border-radius:12px">
+      <strong>💎 Code bonus ×2 gemmes</strong>
+      <p class="small">Entre un code bonus pour gagner 20 gemmes par tour pendant 24 heures.</p>
+      <div class="row"><input id="bonusCodeInput" placeholder="Ex. DOUBLE-ABCD-1234" autocomplete="off"><button id="redeemBonusCode" class="primary" type="button">Activer</button></div>
+      <div id="bonusCodeMsg" class="msg"></div>
+      <div id="bonusStatus" class="small"></div>
+    </div>
+    <button id="playerLogout" class="danger" type="button">🚪 Déconnexion</button>
+  </div>
+</section>
+
+<section class="card" id="leaderboardCard">
+  <h2>🏆 Classement</h2>
+  <div id="leaderboard"></div>
+</section>
+
+<section class="card" id="shopCard">
+  <h2>🛍️ Boutique</h2>
+  <p class="small">Utilise tes gemmes pour acheter des articles.</p>
+  <div id="shopItems"></div>
+  <div id="shopMsg" class="msg"></div>
+</section>
+<section class="card wheelbox" id="wheelCard">
+  <div class="wheelwrap">
+    <div class="pointer">🔻</div>
+    <div class="wheel" id="wheel"><div class="labels" id="wheelLabels"></div></div>
+  </div>
+  <div class="msg" id="resultMsg"></div>
+
+  <div class="steps">
+    <div class="step">
+      <strong>ÉTAPE 1 — 🔑 Rentre ton code</strong>
+      <input id="codeInput" placeholder="Ex. POKE-ABCD-1234" autocomplete="off">
+      <button id="validateCode" class="primary" type="button">✅ Valider le code</button>
+      <div id="codeMsg" class="msg"></div>
+      <div id="codeChoice" style="display:none;margin-top:10px;gap:8px;flex-wrap:wrap">
+        <button id="keepCodeTour" class="success" type="button">💾 Garder le tour</button>
+        <button id="useCodeNow" class="primary" type="button">🎡 Utiliser maintenant</button>
+      </div>
+    </div>
+    <div class="step step2 disabled" id="step2">
+      <strong>ÉTAPE 2 — 🎡 Fais tourner la roue</strong><br>
+      <button id="spin" class="primary" type="button" disabled>🎡 Faire tourner</button>
+    </div>
+  </div>
+</section>
+
+<button class="adminButton" id="adminOpen" type="button">🔐 Coin admin</button>
+
+<section class="card admin" id="admin">
+  <button class="adminClose" id="adminClose" type="button" aria-label="Fermer">×</button>
+  <h2>Administration</h2>
+  <div id="loginBox">
+    <input id="adminPass" type="password" placeholder="Mot de passe admin">
+    <button id="loginBtn" class="primary" type="button">Entrer</button>
+    <div id="loginMsg" class="msg"></div>
+  </div>
+
+  <div id="panel" style="display:none">
+    <button id="logoutBtn" class="danger" type="button">🚪 Déconnexion</button>
+    <p class="small">Version locale : les codes et cadeaux sont conservés dans ce navigateur.</p>
+
+    <h3>🎁 Cadeaux de la roue</h3>
+    <p class="small">Un cadeau par ligne. Tous les cadeaux ci-dessous seront affichés sur la roue.</p>
+    <textarea id="giftList" rows="8" style="width:100%;resize:vertical"></textarea><br>
+    <button id="saveGifts" class="success" type="button">💾 Enregistrer les cadeaux</button>
+    <div id="giftMsg" class="small"></div>
+
+    <h3>🎲 Créer un code</h3>
+    <div class="row">
+      <button id="generateCode" class="success" type="button">🎲 Générer un code</button>
+      <input id="generatedCode" readonly placeholder="Code généré">
+    </div>
+    <button id="copyCode" type="button">📋 Copier</button>
+    <div id="generatedMsg" class="small"></div>
+
+    <h3>➕ Ajouter un code</h3>
+    <div class="row">
+      <input id="newCode" placeholder="Nouveau code">
+      <button id="addCode" class="success" type="button">Ajouter</button>
+    </div>
+
+    <button id="deleteUsedCodes" class="danger" type="button">🗑️ Supprimer les codes utilisés</button>
+    <button id="resetCodes" class="danger" type="button">Réinitialiser tous les codes</button>
+    <h3>💎 Donner des gemmes</h3>
+    <p class="small">Choisis un membre et le nombre de gemmes à lui donner.</p>
+    <div class="row">
+      <select id="memberSelect" style="padding:12px;border-radius:12px;border:1px solid #ccd2df;flex:1"></select>
+      <input id="giveGemsAmount" type="number" min="1" placeholder="Gemmes">
+    </div>
+    <button id="giveGemsBtn" class="success" type="button">💎 Donner les gemmes</button>
+    <div id="giveGemsMsg" class="small"></div>
+
+    <h3>🎡 Donner des tours de roue</h3>
+    <p class="small">Choisis un membre et le nombre de tours à lui donner.</p>
+    <div class="row">
+      <input id="giveSpinsAmount" type="number" min="1" placeholder="Tours">
+    </div>
+    <button id="giveSpinsBtn" class="success" type="button">🎡 Donner les tours</button>
+    <div id="giveSpinsMsg" class="small"></div>
+
+    <h3>🛍️ Articles de la boutique</h3>
+    <p class="small">Un article par ligne au format : <b>Nom | prix en gemmes | tours gagnés</b></p>
+    <textarea id="shopList" rows="7" style="width:100%;resize:vertical"></textarea><br>
+    <button id="saveShop" class="success" type="button">💾 Enregistrer les articles</button>
+    <div id="shopAdminMsg" class="small"></div>
+
+    <h3>✨ Codes bonus ×2 gemmes (24 h)</h3>
+    <p class="small">Génère un code à partager aux joueurs. Chaque joueur peut utiliser chaque code une seule fois. Le bonus dure 24 heures après activation.</p>
+    <div class="row"><button id="generateBonusCode" class="success" type="button">✨ Générer un code ×2</button><input id="generatedBonusCode" readonly placeholder="Code bonus"></div>
+    <button id="copyBonusCode" type="button">📋 Copier le code bonus</button>
+    <div id="bonusAdminMsg" class="small"></div>
+    <div id="bonusCodesList"></div>
+
+    <h3>📋 Codes créés</h3>
+    <div id="codesList"></div>
+  </div>
+</section>
+</main>
+
+<script>
+const ADMIN="POKEADMIN";
+const DEFAULT_GIFTS=["Booster Pokeprout","Mini cadeau","Gros booster","Carte surprise","Bon cadeau","Super cadeau"];
+
+function getGifts(){
+  try{
+    const a=JSON.parse(localStorage.getItem("pokeprout_gifts")||"null");
+    return Array.isArray(a)&&a.length?a:DEFAULT_GIFTS.slice();
+  }catch(e){return DEFAULT_GIFTS.slice();}
+}
+function saveGiftsData(a){localStorage.setItem("pokeprout_gifts",JSON.stringify(a));}
+
+function getCodes(){
+  try{return JSON.parse(localStorage.getItem("pokeprout_codes")||"{}");}
+  catch(e){return {};}
+}
+function saveCodes(c){localStorage.setItem("pokeprout_codes",JSON.stringify(c));}
+
+function getBonusCodes(){
+  try{return JSON.parse(localStorage.getItem("pokeprout_bonus_codes")||"{}");}
+  catch(e){return {};}
+}
+function saveBonusCodes(c){localStorage.setItem("pokeprout_bonus_codes",JSON.stringify(c));}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+function renderGifts(){
+  const gifts=getGifts();
+  const wheel=document.getElementById("wheel");
+  const labels=document.getElementById("wheelLabels");
+  const n=gifts.length;
+  const colors=["#ffd166","#7bdff2","#b2f7ef","#cdb4db","#ffc8dd","#a0c4ff","#caffbf","#ffadad","#fdffb6","#9bf6ff"];
+
+  // Rebuild the wheel completely so every gift gets exactly one slice.
+  const size=500, cx=250, cy=250, r=238;
+  const svgNS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(svgNS,"svg");
+  svg.setAttribute("viewBox","0 0 500 500");
+  svg.setAttribute("width","100%");
+  svg.setAttribute("height","100%");
+  svg.style.display="block";
+
+  function point(angle, radius){
+    const a=(angle-90)*Math.PI/180;
+    return [cx+radius*Math.cos(a),cy+radius*Math.sin(a)];
+  }
+  function arcPath(a0,a1){
+    const p0=point(a0,r), p1=point(a1,r);
+    const large=(a1-a0)>180?1:0;
+    return `M ${cx} ${cy} L ${p0[0]} ${p0[1]} A ${r} ${r} 0 ${large} 1 ${p1[0]} ${p1[1]} Z`;
+  }
+  function wrapText(text,max){
+    const words=String(text).split(/\s+/); const lines=[]; let line="";
+    for(const w of words){
+      const test=line?line+" "+w:w;
+      if(test.length>max && line){lines.push(line);line=w;} else line=test;
+    }
+    if(line)lines.push(line);
+    return lines.slice(0,3);
+  }
+
+  gifts.forEach((gift,i)=>{
+    const a0=i*360/n+1;
+    const a1=(i+1)*360/n-1;
+    const path=document.createElementNS(svgNS,"path");
+    path.setAttribute("d",arcPath(a0,a1));
+    path.setAttribute("fill",colors[i%colors.length]);
+    path.setAttribute("stroke","#fff");
+    path.setAttribute("stroke-width","3");
+    svg.appendChild(path);
+
+    const mid=(a0+a1)/2;
+    const tr=point(mid, r*0.60);
+    const text=document.createElementNS(svgNS,"text");
+    text.setAttribute("x",tr[0]); text.setAttribute("y",tr[1]);
+    text.setAttribute("text-anchor","middle"); text.setAttribute("dominant-baseline","middle");
+    text.setAttribute("font-family","Arial,sans-serif");
+    text.setAttribute("font-weight","800");
+    text.setAttribute("font-size", n>10?"11":n>8?"12":"14");
+    text.setAttribute("fill","#172033");
+    const lines=wrapText(gift,n>9?12:16);
+    lines.forEach((line,j)=>{
+      const tspan=document.createElementNS(svgNS,"tspan");
+      tspan.setAttribute("x",tr[0]);
+      tspan.setAttribute("dy",j===0?`${-(lines.length-1)*7}px`:"14px");
+      tspan.textContent=line;
+      text.appendChild(tspan);
+    });
+    svg.appendChild(text);
+  });
+
+  // Center hub
+  const hub=document.createElementNS(svgNS,"circle");
+  hub.setAttribute("cx",cx);hub.setAttribute("cy",cy);hub.setAttribute("r","55");
+  hub.setAttribute("fill","white");hub.setAttribute("stroke","#ddd");hub.setAttribute("stroke-width","4");
+  svg.appendChild(hub);
+
+  wheel.querySelectorAll("svg").forEach(x=>x.remove());
+  wheel.insertBefore(svg,labels);
+  labels.style.display="none";
+  document.getElementById("giftList").value=gifts.join("\n");
+}
+function renderCodes(){
+  const codes=getCodes();
+  const list=document.getElementById("codesList");
+  const entries=Object.entries(codes);
+  list.innerHTML=entries.length?entries.map(([c,used])=>
+    `<div class="prize" style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+      <span>${escapeHtml(c)} — ${used?"🔒 utilisé":"✅ disponible"}</span>
+      ${used?`<span style="display:flex;gap:4px">
+        <button class="success reactivate-code" data-code="${escapeHtml(c)}" type="button">♻️ Réactiver</button>
+        <button class="danger delete-used-code" data-code="${escapeHtml(c)}" type="button">🗑️ Supprimer</button>
+      </span>`:""}
+    </div>`
+  ).join(""):"<div class='small'>Aucun code.</div>";
+
+  document.querySelectorAll(".reactivate-code").forEach(btn=>{
+    btn.onclick=()=>{
+      const code=btn.dataset.code;
+      const codes=getCodes();
+      if(codes[code]!==true)return;
+      if(confirm("Réactiver le code "+code+" ? Il pourra être utilisé à nouveau.")){
+        codes[code]=false;
+        saveCodes(codes);
+        renderCodes();
+      }
+    };
+  });
+
+  document.querySelectorAll(".delete-used-code").forEach(btn=>{
+    btn.onclick=()=>{
+      const code=btn.dataset.code;
+      const codes=getCodes();
+      if(codes[code]!==true)return;
+      if(confirm("Supprimer définitivement le code utilisé "+code+" ?")){
+        delete codes[code];
+        saveCodes(codes);
+        renderCodes();
+      }
+    };
+  });
+}
+
+function randomCode(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let a="",b="";
+  for(let i=0;i<4;i++)a+=chars[Math.floor(Math.random()*chars.length)];
+  for(let i=0;i<4;i++)b+=chars[Math.floor(Math.random()*chars.length)];
+  return "POKE-"+a+"-"+b;
+}
+
+let validatedCode=null;
+let spinning=false;
+
+document.getElementById("adminClose").onclick=()=>{
+  document.getElementById("admin").classList.remove("show");
+  document.getElementById("adminPass").value="";
+  document.getElementById("loginMsg").textContent="";
+  document.getElementById("panel").style.display="none";
+  document.getElementById("loginBox").style.display="block";
+};
+
+document.getElementById("adminOpen").onclick=()=>{
+  const admin=document.getElementById("admin");
+  admin.classList.add("show");
+  document.getElementById("panel").style.display="none";
+  document.getElementById("loginBox").style.display="block";
+  document.getElementById("adminPass").value="";
+  document.getElementById("loginMsg").textContent="";
+};
+
+document.getElementById("loginBtn").onclick=()=>{
+  if(document.getElementById("adminPass").value===ADMIN){
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("panel").style.display="block";
+    renderCodes();
+    renderBonusCodes();
+    renderMemberSelect();
+    renderAdminShop();
+  }else document.getElementById("loginMsg").textContent="❌ Mot de passe incorrect.";
+};
+
+// ===== Comptes joueurs, gemmes, tours, classement et boutique =====
+let currentPlayer = null;
+
+function getPlayers(){
+  try{return JSON.parse(localStorage.getItem("pokeprout_players")||"{}");}
+  catch(e){return {};}
+}
+function savePlayers(p){localStorage.setItem("pokeprout_players",JSON.stringify(p));}
+
+function getShop(){
+  try{
+    const a=JSON.parse(localStorage.getItem("pokeprout_shop")||"null");
+    return Array.isArray(a)&&a.length?a:[
+      {name:"1 tour",price:30,spins:1},
+      {name:"5 tours",price:130,spins:5},
+      {name:"10 tours",price:240,spins:10}
+    ];
+  }catch(e){return [{name:"1 tour",price:30,spins:1},{name:"5 tours",price:130,spins:5},{name:"10 tours",price:240,spins:10}];}
+}
+function saveShop(a){localStorage.setItem("pokeprout_shop",JSON.stringify(a));}
+
+function updatePlayerUI(){
+  const logged=!!currentPlayer;
+  document.getElementById("authForms").style.display=logged?"none":"block";
+  document.getElementById("playerLogged").style.display=logged?"block":"none";
+  document.getElementById("playerEmailDisplay").textContent=logged?currentPlayer:"";
+  updateStats();
+  updateTicketButton();
+  renderLeaderboard();
+  renderShop();
+}
+function updateStats(){
+  const p=currentPlayer?getPlayers()[currentPlayer]:null;
+  document.getElementById("gemCount").textContent=p?.gems||0;
+  document.getElementById("spinCount").textContent=(p?.tickets||0);
+  const status=document.getElementById("bonusStatus");
+  if(status){
+    const until=Number(p?.gemDoubleUntil||0);
+    status.textContent=until>Date.now()?`✨ Bonus ×2 actif jusqu’au ${new Date(until).toLocaleString("fr-FR")}`:"Aucun bonus ×2 actif.";
+  }
+}
+function normalizeEmail(e){return e.trim().toLowerCase();}
+
+document.getElementById("playerRegister").onclick=()=>{
+  const email=normalizeEmail(document.getElementById("playerEmail").value);
+  const pass=document.getElementById("playerPass").value;
+  const msg=document.getElementById("playerAuthMsg");
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){msg.textContent="❌ Entre une adresse e-mail valide.";return;}
+  if(pass.length<4){msg.textContent="❌ Le mot de passe doit faire au moins 4 caractères.";return;}
+  const players=getPlayers();
+  if(players[email]){msg.textContent="❌ Cette adresse e-mail est déjà inscrite.";return;}
+  players[email]={password:pass,gems:0,spins:0,tickets:0}; // Nouveau compte : 0 gemme, 0 tour et 0 ticket
+  savePlayers(players);
+  currentPlayer=email;
+  localStorage.setItem("pokeprout_current_player",email);
+  msg.textContent="";
+  updatePlayerUI();
+};
+
+document.getElementById("playerLogin").onclick=()=>{
+  const email=normalizeEmail(document.getElementById("playerEmail").value);
+  const pass=document.getElementById("playerPass").value;
+  const players=getPlayers();
+  if(!players[email]||players[email].password!==pass){
+    document.getElementById("playerAuthMsg").textContent="❌ E-mail ou mot de passe incorrect.";
+    return;
+  }
+  currentPlayer=email;
+  localStorage.setItem("pokeprout_current_player",email);
+  document.getElementById("playerAuthMsg").textContent="";
+  updatePlayerUI();
+};
+
+function updateTicketButton(){
+  const p=currentPlayer?getPlayers()[currentPlayer]:null;
+  const b=document.getElementById("useSavedTourTop");
+  if(b) b.disabled=!p || (p.tickets||0)<1 || spinning;
+}
+
+document.getElementById("playerLogout").onclick=()=>{
+  currentPlayer=null;
+  localStorage.removeItem("pokeprout_current_player");
+  validatedCode=null;
+  document.getElementById("codeChoice").style.display="none";
+  document.getElementById("spin").disabled=true;
+  document.getElementById("step2").classList.add("disabled");
+  updatePlayerUI();
+};
+
+function renderLeaderboard(){
+  const players=getPlayers();
+  const arr=Object.entries(players).sort((a,b)=>(b[1].spins||0)-(a[1].spins||0));
+  const el=document.getElementById("leaderboard");
+  el.innerHTML=arr.length?arr.slice(0,20).map(([email,p],i)=>
+    `<div class="rank">#${i+1} — ${escapeHtml(email)} · 🎡 ${p.spins||0} tours · 💎 ${p.gems||0} gemmes</div>`
+  ).join(""):"<div class='small'>Aucun membre pour le moment.</div>";
+}
+
+function renderShop(){
+  const items=getShop();
+  const el=document.getElementById("shopItems");
+  el.innerHTML=items.length?items.map((it,i)=>
+    `<div class="shopItem">
+      <div><strong>${escapeHtml(it.name)}</strong><br><span class="small">💎 ${it.price} · 🎡 +${it.spins} tour${it.spins>1?"s":""}</span></div>
+      <button class="primary buy-item" data-index="${i}" type="button" ${currentPlayer?"":"disabled"}>Acheter</button>
+    </div>`
+  ).join(""):"<div class='small'>Aucun article.</div>";
+  document.querySelectorAll(".buy-item").forEach(btn=>{
+    btn.onclick=()=>{
+      if(!currentPlayer){document.getElementById("shopMsg").textContent="❌ Connecte-toi pour acheter.";return;}
+      const players=getPlayers(), p=players[currentPlayer], item=items[Number(btn.dataset.index)];
+      if(!item)return;
+      if((p.gems||0)<Number(item.price)){document.getElementById("shopMsg").textContent="❌ Pas assez de gemmes.";return;}
+      p.gems-=Number(item.price);
+      p.tickets=(p.tickets||0)+Number(item.spins);
+      savePlayers(players);
+      document.getElementById("shopMsg").textContent=`✅ Achat réussi : ${item.name}`;
+      updatePlayerUI();
+    };
+  });
+}
+
+function renderMemberSelect(){
+  const sel=document.getElementById("memberSelect");
+  const players=getPlayers();
+  sel.innerHTML=Object.keys(players).length?Object.keys(players).map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join(""):"<option value=''>Aucun membre</option>";
+}
+
+function renderAdminShop(){
+  document.getElementById("shopList").value=getShop().map(x=>`${x.name} | ${x.price} | ${x.spins}`).join("\n");
+}
+
+document.getElementById("giveGemsBtn").onclick=()=>{
+  const email=document.getElementById("memberSelect").value;
+  const amount=Math.floor(Number(document.getElementById("giveGemsAmount").value));
+  const players=getPlayers();
+  if(!email||!players[email]||amount<1){document.getElementById("giveGemsMsg").textContent="❌ Membre ou quantité invalide.";return;}
+  players[email].gems=(players[email].gems||0)+amount;
+  savePlayers(players);
+  document.getElementById("giveGemsMsg").textContent=`✅ ${amount} gemmes données à ${email}.`;
+  renderMemberSelect();renderLeaderboard();updateStats();
+};
+
+document.getElementById("giveSpinsBtn").onclick=()=>{
+  const email=document.getElementById("memberSelect").value;
+  const amount=Math.floor(Number(document.getElementById("giveSpinsAmount").value));
+  const players=getPlayers();
+  if(!email||!players[email]||amount<1){
+    document.getElementById("giveSpinsMsg").textContent="❌ Membre ou quantité invalide.";
+    return;
+  }
+  players[email].tickets=(players[email].tickets||0)+amount;
+  savePlayers(players);
+  document.getElementById("giveSpinsAmount").value="";
+  document.getElementById("giveSpinsMsg").textContent=`✅ ${amount} tour${amount>1?"s":""} donné${amount>1?"s":""} à ${email}.`;
+  renderMemberSelect();
+  renderLeaderboard();
+  updateStats();
+};
+
+document.getElementById("saveShop").onclick=()=>{
+  const lines=document.getElementById("shopList").value.split("\n").map(x=>x.trim()).filter(Boolean);
+  const items=[];
+  for(const line of lines){
+    const parts=line.split("|").map(x=>x.trim());
+    if(parts.length!==3)continue;
+    const price=Math.floor(Number(parts[1])), spins=Math.floor(Number(parts[2]));
+    if(parts[0]&&price>=0&&spins>=1)items.push({name:parts[0],price,spins});
+  }
+  if(!items.length){document.getElementById("shopAdminMsg").textContent="❌ Aucun article valide.";return;}
+  saveShop(items);
+  renderShop();
+  document.getElementById("shopAdminMsg").textContent="✅ Boutique mise à jour.";
+};
+
+// 10 gemmes par tour, ou 20 pendant les 24 h du bonus ×2.
+function addSpinReward(email){
+  const players=getPlayers(), p=players[email];
+  if(!p)return 0;
+  p.spins=(p.spins||0)+1;
+  const reward=Number(p.gemDoubleUntil||0)>Date.now()?20:10;
+  p.gems=(p.gems||0)+reward;
+  savePlayers(players);
+  return reward;
+}
+
+function renderBonusCodes(){
+  const list=document.getElementById("bonusCodesList");
+  if(!list)return;
+  const entries=Object.entries(getBonusCodes());
+  list.innerHTML=entries.length?entries.map(([code,data])=>{
+    const count=Array.isArray(data.usedBy)?data.usedBy.length:0;
+    return `<div class="prize" style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap"><span><strong>${escapeHtml(code)}</strong> — utilisé par ${count} joueur(s)</span><button class="danger delete-bonus-code" data-code="${escapeHtml(code)}" type="button">🗑️ Supprimer</button></div>`;
+  }).join(""):"<div class='small'>Aucun code bonus créé.</div>";
+  document.querySelectorAll(".delete-bonus-code").forEach(btn=>btn.onclick=()=>{
+    const code=btn.dataset.code;
+    if(confirm(`Supprimer le code bonus ${code} ?`)){
+      const codes=getBonusCodes();delete codes[code];saveBonusCodes(codes);renderBonusCodes();
+    }
+  });
+}
+
+document.getElementById("generateBonusCode").onclick=()=>{
+  const codes=getBonusCodes();let code;
+  do{code="DOUBLE-"+randomCode().replace("POKE-","");}while(Object.prototype.hasOwnProperty.call(codes,code));
+  codes[code]={usedBy:[],createdAt:Date.now()};saveBonusCodes(codes);
+  document.getElementById("generatedBonusCode").value=code;
+  document.getElementById("bonusAdminMsg").textContent="✅ Code bonus créé. Partage-le aux joueurs.";
+  renderBonusCodes();
+};
+document.getElementById("copyBonusCode").onclick=async()=>{
+  const code=document.getElementById("generatedBonusCode").value;if(!code)return;
+  try{await navigator.clipboard.writeText(code);document.getElementById("bonusAdminMsg").textContent="📋 Code bonus copié !";}
+  catch(e){document.getElementById("generatedBonusCode").select();document.getElementById("bonusAdminMsg").textContent="Sélectionne le code puis copie-le.";}
+};
+document.getElementById("redeemBonusCode").onclick=()=>{
+  const msg=document.getElementById("bonusCodeMsg");
+  if(!currentPlayer){msg.textContent="❌ Connecte-toi d’abord.";return;}
+  const code=document.getElementById("bonusCodeInput").value.trim().toUpperCase();
+  if(!code){msg.textContent="❌ Entre un code bonus.";return;}
+  const codes=getBonusCodes(), data=codes[code];
+  if(!data){msg.textContent="❌ Code bonus invalide.";return;}
+  if(!Array.isArray(data.usedBy))data.usedBy=[];
+  if(data.usedBy.includes(currentPlayer)){msg.textContent="❌ Tu as déjà utilisé ce code bonus.";return;}
+  const players=getPlayers(), player=players[currentPlayer];
+  if(!player){msg.textContent="❌ Compte introuvable.";return;}
+  const now=Date.now(), oldUntil=Number(player.gemDoubleUntil||0);
+  player.gemDoubleUntil=Math.max(now,oldUntil)+24*60*60*1000;
+  data.usedBy.push(currentPlayer);codes[code]=data;
+  saveBonusCodes(codes);savePlayers(players);
+  document.getElementById("bonusCodeInput").value="";
+  msg.textContent="✅ Bonus activé ! Tu gagnes 20 gemmes par tour pendant 24 heures.";
+  updatePlayerUI();renderBonusCodes();
+}
+
+const savedPlayer=localStorage.getItem("pokeprout_current_player");
+if(savedPlayer&&getPlayers()[savedPlayer])currentPlayer=savedPlayer;
+
+document.getElementById("goWheel").onclick=()=>document.getElementById("wheelCard").scrollIntoView({behavior:"smooth"});
+document.getElementById("goShop").onclick=()=>document.getElementById("shopCard").scrollIntoView({behavior:"smooth"});
+document.getElementById("goLeaderboard").onclick=()=>document.getElementById("leaderboardCard").scrollIntoView({behavior:"smooth"});
+
+renderGifts();
+updatePlayerUI();
+
+document.getElementById("logoutBtn").onclick=()=>{
+  document.getElementById("panel").style.display="none";
+  document.getElementById("loginBox").style.display="block";
+  document.getElementById("adminPass").value="";
+};
+
+document.getElementById("saveGifts").onclick=()=>{
+  const gifts=document.getElementById("giftList").value.split("\n").map(x=>x.trim()).filter(Boolean);
+  if(!gifts.length){alert("Il faut au moins un cadeau.");return;}
+  saveGiftsData(gifts);renderGifts();
+  document.getElementById("giftMsg").textContent="✅ Tous les cadeaux ont été enregistrés sur la roue.";
+};
+
+document.getElementById("generateCode").onclick=()=>{
+  const codes=getCodes();let c;
+  do{c=randomCode();}while(Object.prototype.hasOwnProperty.call(codes,c));
+  codes[c]=false;saveCodes(codes);
+  document.getElementById("generatedCode").value=c;
+  document.getElementById("generatedMsg").textContent="✅ Code créé !";
+  renderCodes();
+};
+
+document.getElementById("copyCode").onclick=async()=>{
+  const c=document.getElementById("generatedCode").value;
+  if(!c)return;
+  try{await navigator.clipboard.writeText(c);document.getElementById("generatedMsg").textContent="📋 Code copié !";}
+  catch(e){document.getElementById("generatedMsg").textContent="Sélectionne le code pour le copier.";}
+};
+
+document.getElementById("addCode").onclick=()=>{
+  const input=document.getElementById("newCode");
+  const c=input.value.trim().toUpperCase();
+  if(!c)return;
+  const codes=getCodes();
+  if(codes[c]!==undefined){alert("Ce code existe déjà.");return;}
+  codes[c]=false;saveCodes(codes);input.value="";renderCodes();
+};
+
+document.getElementById("deleteUsedCodes").onclick=()=>{
+  const codes=getCodes();
+  const used=Object.keys(codes).filter(c=>codes[c]===true);
+  if(!used.length){alert("Aucun code utilisé à supprimer.");return;}
+  if(confirm("Supprimer "+used.length+" code(s) utilisé(s) ?")){
+    used.forEach(c=>delete codes[c]);
+    saveCodes(codes);
+    renderCodes();
+  }
+};
+
+document.getElementById("resetCodes").onclick=()=>{
+  if(confirm("Réinitialiser tous les codes ?")){saveCodes({});renderCodes();}
+};
+
+document.getElementById("validateCode").onclick=()=>{
+  if(!currentPlayer){
+    document.getElementById("codeMsg").textContent="❌ Connecte-toi d'abord.";
+    return;
+  }
+  const code=document.getElementById("codeInput").value.trim().toUpperCase();
+  const codes=getCodes();
+  if(!code){document.getElementById("codeMsg").textContent="❌ Entre un code.";return;}
+  if(codes[code]!==false){
+    document.getElementById("codeMsg").textContent="❌ Code invalide ou déjà utilisé.";
+    validatedCode=null;
+    document.getElementById("codeChoice").style.display="none";
+    document.getElementById("spin").disabled=true;
+    document.getElementById("step2").classList.add("disabled");
+    return;
+  }
+  validatedCode=code;
+  document.getElementById("codeMsg").textContent="✅ Code valide ! Choisis quoi en faire :";
+  document.getElementById("codeChoice").style.display="flex";
+  document.getElementById("spin").disabled=true;
+  document.getElementById("step2").classList.add("disabled");
+};
+
+function finishCodeChoiceKeep(){
+  if(!currentPlayer || !validatedCode)return;
+  const codes=getCodes();
+  if(codes[validatedCode]!==false){
+    document.getElementById("codeMsg").textContent="❌ Ce code n'est plus disponible.";
+    validatedCode=null;
+    document.getElementById("codeChoice").style.display="none";
+    return;
+  }
+  const players=getPlayers(), p=players[currentPlayer];
+  p.tickets=(p.tickets||0)+1;
+  codes[validatedCode]=true;
+  savePlayers(players);
+  saveCodes(codes);
+  document.getElementById("codeMsg").textContent="💾 Tour conservé ! Il est maintenant disponible dans ton compteur.";
+  validatedCode=null;
+  document.getElementById("codeChoice").style.display="none";
+  updatePlayerUI();
+}
+
+function useValidatedCodeNow(){
+  if(!currentPlayer || !validatedCode || spinning)return;
+  const codes=getCodes();
+  if(codes[validatedCode]!==false){
+    document.getElementById("codeMsg").textContent="❌ Ce code n'est plus disponible.";
+    validatedCode=null;
+    document.getElementById("codeChoice").style.display="none";
+    return;
+  }
+  document.getElementById("codeChoice").style.display="none";
+  document.getElementById("step2").classList.remove("disabled");
+  document.getElementById("spin").disabled=false;
+  document.getElementById("spin").click();
+}
+
+document.getElementById("keepCodeTour").onclick=finishCodeChoiceKeep;
+document.getElementById("useCodeNow").onclick=useValidatedCodeNow;
+
+let resultTimer=null;
+document.getElementById("spin").onclick=()=>{
+  if(!currentPlayer){
+    document.getElementById("resultMsg").textContent="❌ Connecte-toi pour jouer.";
+    return;
+  }
+  const usingTicket = !!currentPlayer && (getPlayers()[currentPlayer]?.tickets||0)>0 && !validatedCode;
+  if((!validatedCode && !usingTicket)||spinning)return;
+
+  // Si un deuxième tour commence, le résultat précédent disparaît immédiatement.
+  if(resultTimer){clearTimeout(resultTimer);resultTimer=null;}
+  document.getElementById("resultMsg").textContent="";
+
+  const codes=getCodes();
+  if(!usingTicket && codes[validatedCode]!==false){
+    document.getElementById("codeMsg").textContent="❌ Ce code n'est plus disponible.";
+    validatedCode=null;return;
+  }
+  spinning=true;
+  document.getElementById("spin").disabled=true;
+  document.getElementById("resultMsg").textContent="🎡 La roue tourne…";
+  const wheel=document.getElementById("wheel");
+  const turns=1440+Math.floor(Math.random()*1080);
+  wheel.style.transform="rotate("+turns+"deg)";
+
+  setTimeout(()=>{
+    const currentCodes=getCodes();
+    const gifts=getGifts();
+    if(!usingTicket && currentCodes[validatedCode]!==false){
+      document.getElementById("resultMsg").textContent="❌ Ce code n'est plus disponible.";
+    }else{
+      const gift=gifts[Math.floor(Math.random()*gifts.length)];
+      if(usingTicket){
+        const players=getPlayers(), p=players[currentPlayer];
+        p.tickets=Math.max(0,(p.tickets||0)-1);
+        savePlayers(players);
+      }else{
+        currentCodes[validatedCode]=true;
+        saveCodes(currentCodes);
+      }
+      const earned=addSpinReward(currentPlayer);
+      document.getElementById("resultMsg").textContent="🎉 Bravo ! Tu gagnes : "+gift+" · 💎 +"+earned+" gemmes";
+      resultTimer=setTimeout(()=>{
+        document.getElementById("resultMsg").textContent="";
+        resultTimer=null;
+      },15000);
+      document.getElementById("codeMsg").textContent=usingTicket?"🎟️ Tour acheté utilisé.":"🔒 Code utilisé.";
+    }
+    validatedCode=null;
+    spinning=false;
+    document.getElementById("spin").disabled=true;
+    updatePlayerUI();
+  },4100);
+};
+
+document.getElementById("useSavedTourTop").onclick=()=>{
+  if(!currentPlayer || spinning)return;
+  const p=getPlayers()[currentPlayer];
+  if(!p || (p.tickets||0)<1)return;
+  if(resultTimer){clearTimeout(resultTimer);resultTimer=null;}
+  document.getElementById("resultMsg").textContent="";
+  document.getElementById("spin").disabled=true;
+  document.getElementById("useSavedTourTop").disabled=true;
+  spinning=true;
+  const wheel=document.getElementById("wheel");
+  const turns=1440+Math.floor(Math.random()*1080);
+  wheel.style.transform="rotate("+turns+"deg)";
+  document.getElementById("resultMsg").textContent="🎡 La roue tourne…";
+  setTimeout(()=>{
+    const players=getPlayers(), pp=players[currentPlayer];
+    pp.tickets=Math.max(0,(pp.tickets||0)-1);
+    savePlayers(players);
+    const gifts=getGifts();
+    const gift=gifts[Math.floor(Math.random()*gifts.length)];
+    const earned=addSpinReward(currentPlayer);
+    document.getElementById("resultMsg").textContent="🎉 Bravo ! Tu gagnes : "+gift+" · 💎 +"+earned+" gemmes";
+    resultTimer=setTimeout(()=>{document.getElementById("resultMsg").textContent="";resultTimer=null;},15000);
+    spinning=false;
+    updatePlayerUI();
+  },4100);
+};
+
+renderGifts();
+renderCodes();
+</script>
+</body>
+</html>
